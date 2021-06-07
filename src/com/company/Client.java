@@ -12,7 +12,6 @@ public class Client {
     private DataOutputStream out;
     private BufferedReader br;
     private Connection connection;
-//    private Role role;
 
     public Client(String address , int port ){
         try {

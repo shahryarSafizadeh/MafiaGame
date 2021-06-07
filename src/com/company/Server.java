@@ -10,10 +10,13 @@ import java.util.concurrent.Executors;
 
 public class Server {
 
+
     private ServerSocket server;
     private Socket socket;
     private ArrayList<Handler> clients = new ArrayList<>();
     private ExecutorService pool = Executors.newFixedThreadPool(6);
+    private int readyPlayers = 0;
+
 
     public Server(int port){
         try {
@@ -21,7 +24,7 @@ public class Server {
             System.out.println("server is waiting...");
             while (true){
                 socket = server.accept();
-                Handler handler = new Handler(socket , clients);
+                Handler handler = new Handler(socket , clients , this);
                 clients.add(handler);
                 pool.execute(handler);
             }
@@ -31,7 +34,17 @@ public class Server {
         }
     }
 
+
+
     public static void main(String[] args) {
         Server server = new Server(8585);
+    }
+
+    public void increaseReadyPlayers() {
+        readyPlayers++;
+    }
+
+    public synchronized boolean areAllPlayersReady() {
+        return readyPlayers==clients.size();
     }
 }

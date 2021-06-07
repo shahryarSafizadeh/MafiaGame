@@ -9,6 +9,7 @@ import java.util.ArrayList;
 public class Handler implements Runnable{
 
     private Socket socket;
+    private Server server;
     protected DataOutputStream out;
     private DataInputStream in;
     private String name;
@@ -19,8 +20,9 @@ public class Handler implements Runnable{
     public boolean canRecieve;
     public boolean isReady;
 
-    public Handler(Socket socket ,ArrayList<Handler> clients){
+    public Handler(Socket socket ,ArrayList<Handler> clients , Server server){
         this.socket = socket;
+        this.server = server;
         this.clients = clients;
         canRecieve = false;
         canSpeak = false;
@@ -37,23 +39,28 @@ public class Handler implements Runnable{
         String line="";
         try {
             while (true){
+                //registering players
                 if (!isReady){
                     register();
+                    server.increaseReadyPlayers();
+                    out.writeUTF("Waiting for other players to join...");
                 }
-                line = in.readUTF();
-                System.out.println(line);
-                if (line.equals("quit")) {
-                    quit();
-                    return;
-                }
+                //running chat room
+                if (server.areAllPlayersReady()) {
+                    line = in.readUTF();
+                    System.out.println(line);
+                    if (line.equals("quit")) {
+                        quit();
+                        return;
+                    }
 
-                if (this.canSpeak)
-                    sendToAll(this.name , line);
-                else {
-                    this.out.writeUTF("You cant chat!");
-                    this.out.flush();
+                    if (this.canSpeak)
+                        sendToAll(this.name, line);
+                    else {
+                        this.out.writeUTF("You cant chat!");
+                        this.out.flush();
+                    }
                 }
-
             }
         }catch (IOException e){
             e.printStackTrace();
