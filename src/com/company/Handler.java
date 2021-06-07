@@ -13,19 +13,37 @@ public class Handler implements Runnable{
     protected DataOutputStream out;
     private DataInputStream in;
     private String name;
+    private String role;
     private ArrayList<Handler> clients;
     private static ArrayList<String> names = names = new ArrayList<>();
+    private Game game;
+
+    public String getName() {
+        return name;
+    }
 
     public boolean canSpeak;
     public boolean canRecieve;
     public boolean isReady;
 
-    public Handler(Socket socket ,ArrayList<Handler> clients , Server server){
+    private String chatMode;
+
+    public Handler(Socket socket ,ArrayList<Handler> clients , Server server ){
+        this.game = server.getGame();
         this.socket = socket;
         this.server = server;
         this.clients = clients;
         canRecieve = false;
         canSpeak = false;
+//        if (game.isFirstNight()){
+//            this.chatMode = "FIRSTNIGHT";
+//        }else if (game.isDay() && !game.isVoting()){
+//            this.chatMode = "FREECHAT";
+//        }else if (game.isVoting()){
+//            this.chatMode = "VOTING";
+//        }else if (!game.isDay() && !game.isFirstNight()){
+//            this.chatMode = "NIGHT";
+//        }
         try {
             out = new DataOutputStream(socket.getOutputStream());
             in = new DataInputStream(socket.getInputStream());
@@ -46,24 +64,37 @@ public class Handler implements Runnable{
                     out.writeUTF("Waiting for other players to join...");
                 }
                 //running chat room
-                if (server.areAllPlayersReady()) {
-                    line = in.readUTF();
-                    System.out.println(line);
-                    if (line.equals("quit")) {
-                        quit();
-                        return;
-                    }
+//                if (server.areAllPlayersReady()) {
+//                    line = in.readUTF();
+//                    System.out.println(line);
+//                    if (line.equals("quit")) {
+//                        quit();
+//                        return;
+//                    }
+//
+//                    if (this.canSpeak)
+//                        sendToAll(this.name, line);
+//                    else {
+//                        this.out.writeUTF("You cant chat!");
+//                        this.out.flush();
+//                    }
+//                }
 
-                    if (this.canSpeak)
-                        sendToAll(this.name, line);
-                    else {
-                        this.out.writeUTF("You cant chat!");
-                        this.out.flush();
-                    }
+                if (chatMode.equals("FIRSTNIGHT")){
+                    //first night things!
+                    firstNight();
+                    break;
                 }
             }
         }catch (IOException e){
             e.printStackTrace();
+        }
+    }
+
+    public void firstNight() throws IOException {
+        notifyAllClients("[GOD] : hey everyone this is first night and when i tell your roles the day beggin!");
+        for (Handler client : clients){
+            out.writeUTF("[GOD]:You are " + this.getRole(this));
         }
     }
 
@@ -81,6 +112,7 @@ public class Handler implements Runnable{
                 this.out.close();
                 this.in.close();
                 this.socket.close();
+                this.getRole(this);
                 break;
             }
             System.out.println("Wrong input!");
@@ -117,6 +149,10 @@ public class Handler implements Runnable{
                 continue;
             }
         }
+    }
+
+    public String getRole(Handler client){
+        return this.game.getPlayers().get(client).name;
     }
 
     //sending a text to everyone
