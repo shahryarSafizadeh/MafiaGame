@@ -4,5 +4,5 @@ public enum Mode {
     FREECHAT,
     VOTING,
     NIGHT,
-    FIRSTNIGHT;
+    FIRSTNIGHT
 }
