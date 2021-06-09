@@ -13,28 +13,31 @@ public class Handler implements Runnable{
     protected DataOutputStream out;
     private DataInputStream in;
     private String name;
-    private String role;
+    private Role role;
     private ArrayList<Handler> clients;
     private static ArrayList<String> names = names = new ArrayList<>();
-    private Game game;
+    public boolean canSpeak;
+    public boolean canRecieve;
+    public boolean isReady;
+    private Mode mode;
+    public boolean hasRole = false;
 
     public String getName() {
         return name;
     }
 
-    public boolean canSpeak;
-    public boolean canRecieve;
-    public boolean isReady;
+    public Role getRole() {
+        return role;
+    }
 
-    private String chatMode;
-
-    public Handler(Socket socket ,ArrayList<Handler> clients , Server server ){
-        this.game = server.getGame();
+    public Handler(Socket socket , ArrayList<Handler> clients , Server server){
+//        this.mode =server.getGame().getMode();
         this.socket = socket;
         this.server = server;
         this.clients = clients;
         canRecieve = false;
         canSpeak = false;
+
 //        if (game.isFirstNight()){
 //            this.chatMode = "FIRSTNIGHT";
 //        }else if (game.isDay() && !game.isVoting()){
@@ -63,8 +66,12 @@ public class Handler implements Runnable{
                     server.increaseReadyPlayers();
                     out.writeUTF("Waiting for other players to join...");
                 }
+
                 //running chat room
 //                if (server.areAllPlayersReady()) {
+//                    out.writeUTF("your role is " + this.role.name + " " + this.role.isMafia);
+//                    out.flush();
+//
 //                    line = in.readUTF();
 //                    System.out.println(line);
 //                    if (line.equals("quit")) {
@@ -80,11 +87,27 @@ public class Handler implements Runnable{
 //                    }
 //                }
 
-                if (chatMode.equals("FIRSTNIGHT")){
-                    //first night things!
-                    firstNight();
-                    break;
+
+                if (server.areAllPlayersReady()) {
+                    this.mode = this.server.getGame().getMode();
+                    switch (this.mode) {
+                        case FIRSTNIGHT:
+                            //first night things
+                            firstNight();
+                            break;
+                        case FREECHAT:
+                            //reechat things
+                            break;
+                        case VOTING:
+                            //voting things
+                            break;
+                        case NIGHT:
+                            //night things
+                            break;
+                    }
+                    return;
                 }
+
             }
         }catch (IOException e){
             e.printStackTrace();
@@ -92,11 +115,47 @@ public class Handler implements Runnable{
     }
 
     public void firstNight() throws IOException {
-        notifyAllClients("[GOD] : hey everyone this is first night and when i tell your roles the day beggin!");
-        for (Handler client : clients){
-            out.writeUTF("[GOD]:You are " + this.getRole(this));
+        //telling everybody for starting first night --------> do it better
+        this.out.writeUTF("[GOD]:Hey everyone this is first night.");
+        this.out.flush();
+        //telling mafia  ---------> do it better
+        showMafias();
+        //telling citizens -------> do it better
+        if (this.getRole() instanceof Citizen){
+            this.out.writeUTF("[GOD]:Your role is " + this.getRole().name);
+            this.out.flush();
+            if (this.getRole() instanceof Mayor){
+                Handler doc = findPlayer("Doctor");
+                this.out.writeUTF("[GOD]:" + doc.name + " is Doctor!");
+                this.out.flush();
+            }
         }
     }
+
+    public void showMafias() throws IOException {
+        int i = 1;
+        if (this.role instanceof Mafia){
+            this.out.writeUTF("You are " + this.getRole().name + " and the other Mafias are:");
+            this.out.flush();
+            for (Handler client : clients){
+                if (client.role.isMafia && !client.name.equals(this.name)){
+                    this.out.writeUTF(i+")"+ client.name + " is " + client.getRole().name);
+                    i++;
+                }
+            }
+        }
+    }
+
+    //finding a player by its role
+    public Handler findPlayer(String role){
+        for (Handler client : clients){
+            if (client.getRole().name.equals(role)){
+                return client;
+            }
+        }
+        return null;
+    }
+
 
     //for quiting from the chat
     public void quit() throws IOException{
@@ -111,8 +170,6 @@ public class Handler implements Runnable{
                 this.canRecieve = false;
                 this.out.close();
                 this.in.close();
-                this.socket.close();
-                this.getRole(this);
                 break;
             }
             System.out.println("Wrong input!");
@@ -130,7 +187,7 @@ public class Handler implements Runnable{
                 names.add(name);
                 this.name = name;
             }else if (names.contains(name)){
-                out.writeUTF("Tekrarie!!!");
+                out.writeUTF("This user is in the game!Please choose another name.");
                 continue;
             }
             break;
@@ -143,6 +200,8 @@ public class Handler implements Runnable{
                 this.canRecieve = true;
                 notifyAllClients(name + " joined the chat!");
                 this.isReady = true;
+                int index = clients.indexOf(this);
+                this.role =server.getRoles().get(index);
                 break;
             }else {
                 out.writeUTF("Wrong input!");
@@ -151,9 +210,6 @@ public class Handler implements Runnable{
         }
     }
 
-    public String getRole(Handler client){
-        return this.game.getPlayers().get(client).name;
-    }
 
     //sending a text to everyone
     public void sendToAll(String sender , String msg){
@@ -182,4 +238,6 @@ public class Handler implements Runnable{
             }
         }
     }
+
+
 }
