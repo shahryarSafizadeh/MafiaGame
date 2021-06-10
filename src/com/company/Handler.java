@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.sql.Struct;
 import java.util.ArrayList;
 
 public class Handler implements Runnable{
@@ -20,7 +21,9 @@ public class Handler implements Runnable{
     public boolean canRecieve;
     public boolean isReady;
     private Mode mode;
-    public boolean hasRole = false;
+    private boolean hasRole = false;
+    private int votes;
+    private Handler votesTo;
 
     public String getName() {
         return name;
@@ -67,43 +70,25 @@ public class Handler implements Runnable{
                     out.writeUTF("Waiting for other players to join...");
                 }
 
-                //running chat room
-//                if (server.areAllPlayersReady()) {
-//                    out.writeUTF("your role is " + this.role.name + " " + this.role.isMafia);
-//                    out.flush();
-//
-//                    line = in.readUTF();
-//                    System.out.println(line);
-//                    if (line.equals("quit")) {
-//                        quit();
-//                        return;
-//                    }
-//
-//                    if (this.canSpeak)
-//                        sendToAll(this.name, line);
-//                    else {
-//                        this.out.writeUTF("You cant chat!");
-//                        this.out.flush();
-//                    }
-//                }
-
-
                 if (server.areAllPlayersReady()) {
                     this.mode = this.server.getGame().getMode();
                     switch (this.mode) {
                         case FIRSTNIGHT:
                             //first night things
                             firstNight();
-                            break;
+                            this.server.getGame().setMode(Mode.FREECHAT);
+                            this.mode = Mode.FREECHAT;
                         case FREECHAT:
-                            //reechat things
-                            break;
+                            //freechat things
+                            freeChat();
+                            this.mode = Mode.NIGHT;
                         case VOTING:
                             //voting things
-                            break;
+//                            voting();
                         case NIGHT:
                             //night things
-                            break;
+                            notifyAllClients("THIS IS NIGHT MODE BITCH!");
+                            return;
                     }
                     return;
                 }
@@ -111,6 +96,115 @@ public class Handler implements Runnable{
             }
         }catch (IOException e){
             e.printStackTrace();
+        }
+    }
+
+    public int getVotes() {
+        return votes;
+    }
+
+    public void setVotes(int votes) {
+        this.votes = votes;
+    }
+
+    public Handler getVotesTo() {
+        return votesTo;
+    }
+
+    public void setVotesTo(Handler votesTo) {
+        this.votesTo = votesTo;
+    }
+
+    public void voting()throws IOException{
+        this.out.writeUTF("[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!");
+        this.out.flush();
+        this.out.writeUTF("[GOD]:This is list of players :");
+        this.out.flush();
+        //showing players list
+        showPlayersList();
+        this.out.writeUTF("-for voting a player please just type the players name!");
+        this.out.flush();
+        //timing stuff
+        long start = System.currentTimeMillis();
+        long end = start + 30*1000;
+        //voting things
+        String line ="";
+        while (System.currentTimeMillis()<end){
+            line = in.readUTF();
+            System.out.println(line);
+            if (submitVote(line)){
+                this.out.writeUTF("[GOD]:You successfully voted!");
+            }else {
+                this.out.writeUTF("[GOD]:Wrong input!Try again.");
+            }
+        }
+        notifyAllClients("VOTING TIME'S UP!");
+        showVotes();
+
+    }
+
+    public void showVotes()throws IOException{
+        int i=1;
+        for (Handler c : clients){
+            if (c.canSpeak){
+                this.out.writeUTF(i +")" + c.getName() +" has " + c.getVotes() +" votes.");
+                i++;
+                if (c.getVotes()>0) {
+                    this.out.writeUTF("- These are the voters:");
+                    for (Handler voter : clients) {
+                        if (voter.getVotesTo().getName().equals(c.getName())) {
+                            this.out.writeUTF("   -" + voter.getName());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    public boolean submitVote(String name){
+        if (this.name.equals(name))
+            return false;
+        for (Handler client : clients){
+            if (client.name.equals(name) && client.canSpeak){
+                this.votesTo = client;
+                client.votes++;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void showPlayersList() throws IOException{
+        int i = 1;
+        for (Handler client : clients){
+            this.out.writeUTF(i+")"+client.getName());
+            this.out.flush();
+            i++;
+        }
+    }
+
+    public void freeChat()throws IOException{
+        long start = System.currentTimeMillis();
+        long end = start + 60*1000;
+        String line = "";
+        synchronized (this) {
+            while (System.currentTimeMillis() < end) {
+                line = in.readUTF();
+                System.out.println(line);
+                if (line.equals("quit")) {
+                    quit();
+                    return;
+                }
+                if (this.canSpeak)
+                    sendToAll(this.name, line);
+                else {
+                    this.out.writeUTF("[GOD]:You are dead!");
+                    this.out.flush();
+                }
+            }
+            notifyAllClients("[GOD]:TIMES UP");
+            this.mode = Mode.VOTING;
         }
     }
 
@@ -168,8 +262,6 @@ public class Handler implements Runnable{
                 break;
             } else if (!command.isBlank() && command.equals("2")) {
                 this.canRecieve = false;
-                this.out.close();
-                this.in.close();
                 break;
             }
             System.out.println("Wrong input!");
