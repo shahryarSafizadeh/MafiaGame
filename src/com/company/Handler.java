@@ -26,6 +26,7 @@ public class Handler implements Runnable{
     private boolean hasRole = false;
     private int votes;
     private Handler votesTo;
+    private boolean isAlive;
 
     public String getName() {
         return name;
@@ -82,7 +83,7 @@ public class Handler implements Runnable{
                         case NIGHT:
                             //night things
                             notifyAllClients("THIS IS NIGHT MODE BITCH!");
-                            return;
+                            break;
                     }
                     return;
                 }
@@ -134,18 +135,124 @@ public class Handler implements Runnable{
                 } else {
                     this.out.writeUTF("[GOD]:Wrong input!Try again.");
                 }
+
             }
         }
         this.out.writeUTF("[GOD]:VOTING TIME'S UP!");
         this.out.flush();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        //showing the results
         showVotes();
         //final voting stuff
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        Handler client = whoToLeave();
+        String choice="";
+        if (client==null)
+            this.out.writeUTF("[GOD]:Nobody leaves the game.");
+        else{
+            if (!(this.role instanceof Mayor) && this.isAlive){
+                this.out.writeUTF("[GOD]:Waiting for the Mayor...");
+//                try {
+//                    Thread.sleep(7000);
+//                } catch (InterruptedException e) {
+//                    e.printStackTrace();
+//                }
+            }
+            if (this.role instanceof Mayor && this.isAlive){
+               mayorAct(client);
+            }else if (this.role instanceof Mayor && !this.isAlive){
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+//        resetVoting();
     }
 
+    public void mayorAct(Handler client){
+        String choice="";
+        try {
+            this.out.writeUTF("[GOD]:if you are agree to kill " + client.getName()+" type yes if not type no");
+            this.out.flush();
+            choice = in.readUTF();
+            if (choice.equals("yes")){
+                client.isAlive = false;
+                client.canSpeak = false;
+                client.out.writeUTF("[GOD]:Mayor voted to kill you. if you wanna see the rest of game type 1");
+                client.out.flush();
+                String choice1 =client.in.readUTF();
+                if (choice1.equals("1"))
+                    client.canRecieve = true;
+                else
+                    client.canRecieve = false;
+                notifyAllClients("[GOD]:"+client.getName()+" is death.");
+            }else if (choice.equals("no")){
+                client.out.writeUTF("[GOD]:Mayor voted to save you.");
+                client.out.flush();
+                client.canRecieve=false;
+                notifyAllClients("[GOD]:Mayor saved "+client.getName());
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public void resetVoting(){
+        for (Handler client : clients){
+            client.votes=0;
+            client.votesTo = null;
+        }
+    }
+
+    //findout who should leave the game by voting
+    public Handler whoToLeave(){
+        int max = findMaxVote();
+        int count=0;
+        for (Handler client:clients){
+            if (client.getVotes()==max)
+                count++;
+        }
+        if (count==1)
+            return findPlayerByVote(max);
+        else
+            return null;
+    }
+
+    //finding a player by number of votes
+    public Handler findPlayerByVote(int max){
+        for (Handler client : clients){
+            if (client.getVotes()==max)
+                return client;
+        }
+        return null;
+    }
+
+    //finding max number of votes
+    public int findMaxVote(){
+        int max=0;
+        for (Handler client : clients){
+            if (client.getVotes()>max)
+                max = client.getVotes();
+        }
+        return max;
+    }
+
+    //showing voting results
     public void showVotes()throws IOException{
         int i=1;
         for (Handler c : clients){
-            if (c.canSpeak){
+            if (c.isAlive){
                 this.out.writeUTF(i +")" + c.getName() +" has " + c.getVotes() +" votes.");
                 i++;
                 if (c.getVotes()>0) {
@@ -160,12 +267,12 @@ public class Handler implements Runnable{
         }
     }
 
-
+    //submitting a vote
     public boolean submitVote(String name){
         if (this.name.equals(name))
             return false;
         for (Handler client : clients){
-            if (client.name.equals(name) && client.canSpeak){
+            if (client.name.equals(name) && client.isAlive){
                 this.votesTo = client;
                 client.votes++;
                 return true;
@@ -174,21 +281,25 @@ public class Handler implements Runnable{
         return false;
     }
 
+    //showing players list
     public void showPlayersList() throws IOException{
         int i = 1;
         for (Handler client : clients){
-            this.out.writeUTF(i+")"+client.getName());
-            this.out.flush();
-            i++;
+            if (client.isAlive) {
+                this.out.writeUTF(i + ")" + client.getName());
+                this.out.flush();
+                i++;
+            }
         }
     }
 
+    //free chat things
     public void freeChat()throws IOException {
-        long start = server.getSystemTime();
-        long end = start + 30 * 1000;
+        long start = System.currentTimeMillis();
+        long end = start + 10 * 1000;
         String line = "";
         int bytes = 0;
-        while (server.getSystemTime() < end) {
+        while (System.currentTimeMillis()< end) {
             bytes = in.available();
             if (bytes>0) {
                 line = in.readUTF();
@@ -207,9 +318,11 @@ public class Handler implements Runnable{
         }
         this.out.writeUTF("[GOD]:TIMES UP");
         this.out.flush();
+
     }
 
 
+    //first night things
     public void firstNight() throws IOException {
         //telling everybody for starting first night --------> do it better
         this.out.writeUTF("[GOD]:Hey everyone this is first night.");
@@ -221,29 +334,36 @@ public class Handler implements Runnable{
             this.out.writeUTF("[GOD]:Your role is " + this.getRole().name);
             this.out.flush();
             if (this.getRole() instanceof Mayor){
-                Handler doc = findPlayer("Doctor");
+                Handler doc = findPlayerByRole("Doctor");
                 this.out.writeUTF("[GOD]:" + doc.name + " is Doctor!");
                 this.out.flush();
             }
         }
     }
 
+    //showing mafias to each other
     public void showMafias() throws IOException {
         int i = 1;
         if (this.role instanceof Mafia){
-            this.out.writeUTF("You are " + this.getRole().name + " and the other Mafias are:");
-            this.out.flush();
-            for (Handler client : clients){
-                if (client.role.isMafia && !client.name.equals(this.name)){
-                    this.out.writeUTF(i+")"+ client.name + " is " + client.getRole().name);
-                    i++;
+            if (server.getGame().getMafiaCount()==1) {
+                this.out.writeUTF("You are " + this.getRole().name);
+                this.out.flush();
+            } else {
+                this.out.writeUTF("You are " + this.getRole().name + " and the other Mafias are:");
+                this.out.flush();
+                for (Handler client : clients) {
+                    if (client.role.isMafia && !client.name.equals(this.name)) {
+                        this.out.writeUTF(i + ")" + client.name + " is " + client.getRole().name);
+                        this.out.flush();
+                        i++;
+                    }
                 }
             }
         }
     }
 
     //finding a player by its role
-    public Handler findPlayer(String role){
+    public Handler findPlayerByRole(String role){
         for (Handler client : clients){
             if (client.getRole().name.equals(role)){
                 return client;
@@ -253,7 +373,7 @@ public class Handler implements Runnable{
     }
 
 
-    //for quiting from the chat
+    //for quiting from the chat ------------> has very very things to do
     public void quit() throws IOException{
         this.out.writeUTF("You left the chat! if you want to see the rest of chat press 1 else 2!");
         this.out.flush();
@@ -292,6 +412,7 @@ public class Handler implements Runnable{
             if (!command.isBlank() && command.equals("ready")) {
                 this.canSpeak = true;
                 this.canRecieve = true;
+                this.isAlive = true;
                 notifyAllClients(name + " joined the chat!");
                 this.isReady = true;
                 int index = clients.indexOf(this);
