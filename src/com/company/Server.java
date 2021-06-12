@@ -66,7 +66,6 @@ public class Server {
         return readyPlayers==playerCount;
     }
 
-
     public static void main(String[] args) {
         int count;
         while (true) {
@@ -79,8 +78,6 @@ public class Server {
                 break;
         }
         Server server = new Server(8585 , count);
-
-
     }
 
 }

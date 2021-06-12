@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.net.Socket;
 import java.sql.Struct;
 import java.util.ArrayList;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Handler implements Runnable{
 
@@ -41,15 +43,6 @@ public class Handler implements Runnable{
         canRecieve = false;
         canSpeak = false;
 
-//        if (game.isFirstNight()){
-//            this.chatMode = "FIRSTNIGHT";
-//        }else if (game.isDay() && !game.isVoting()){
-//            this.chatMode = "FREECHAT";
-//        }else if (game.isVoting()){
-//            this.chatMode = "VOTING";
-//        }else if (!game.isDay() && !game.isFirstNight()){
-//            this.chatMode = "NIGHT";
-//        }
         try {
             out = new DataOutputStream(socket.getOutputStream());
             in = new DataInputStream(socket.getInputStream());
@@ -81,10 +74,11 @@ public class Handler implements Runnable{
                         case FREECHAT:
                             //freechat things
                             freeChat();
-                            this.mode = Mode.NIGHT;
+                            this.mode = Mode.VOTING;
                         case VOTING:
                             //voting things
-//                            voting();
+                            voting();
+                            this.mode =  Mode.NIGHT;
                         case NIGHT:
                             //night things
                             notifyAllClients("THIS IS NIGHT MODE BITCH!");
@@ -129,18 +123,23 @@ public class Handler implements Runnable{
         long end = start + 30*1000;
         //voting things
         String line ="";
+        int bytes = 0;
         while (System.currentTimeMillis()<end){
-            line = in.readUTF();
-            System.out.println(line);
-            if (submitVote(line)){
-                this.out.writeUTF("[GOD]:You successfully voted!");
-            }else {
-                this.out.writeUTF("[GOD]:Wrong input!Try again.");
+            bytes = in.available();
+            if (bytes>0) {
+                line = in.readUTF();
+                System.out.println(line);
+                if (submitVote(line)) {
+                    this.out.writeUTF("[GOD]:You successfully voted!");
+                } else {
+                    this.out.writeUTF("[GOD]:Wrong input!Try again.");
+                }
             }
         }
-        notifyAllClients("VOTING TIME'S UP!");
+        this.out.writeUTF("[GOD]:VOTING TIME'S UP!");
+        this.out.flush();
         showVotes();
-
+        //final voting stuff
     }
 
     public void showVotes()throws IOException{
@@ -184,12 +183,14 @@ public class Handler implements Runnable{
         }
     }
 
-    public void freeChat()throws IOException{
-        long start = System.currentTimeMillis();
-        long end = start + 60*1000;
+    public void freeChat()throws IOException {
+        long start = server.getSystemTime();
+        long end = start + 30 * 1000;
         String line = "";
-        synchronized (this) {
-            while (System.currentTimeMillis() < end) {
+        int bytes = 0;
+        while (server.getSystemTime() < end) {
+            bytes = in.available();
+            if (bytes>0) {
                 line = in.readUTF();
                 System.out.println(line);
                 if (line.equals("quit")) {
@@ -203,10 +204,11 @@ public class Handler implements Runnable{
                     this.out.flush();
                 }
             }
-            notifyAllClients("[GOD]:TIMES UP");
-            this.mode = Mode.VOTING;
         }
+        this.out.writeUTF("[GOD]:TIMES UP");
+        this.out.flush();
     }
+
 
     public void firstNight() throws IOException {
         //telling everybody for starting first night --------> do it better
