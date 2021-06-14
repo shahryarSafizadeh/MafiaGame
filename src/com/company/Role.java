@@ -13,5 +13,4 @@ public abstract class Role {
         this.canSpeak = false;
     }
 
-    public abstract void act(Game game);
 }

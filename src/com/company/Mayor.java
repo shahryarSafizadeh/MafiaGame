@@ -6,8 +6,5 @@ public class Mayor extends Citizen{
         super("Mayor");
     }
 
-    @Override
-    public void act(Game game) {
 
-    }
 }

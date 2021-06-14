@@ -7,6 +7,4 @@ public abstract class Citizen extends Role{
         this.isMafia = false;
     }
 
-    @Override
-    public abstract void act(Game game);
 }

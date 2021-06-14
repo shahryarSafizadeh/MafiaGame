@@ -6,8 +6,5 @@ public class Detective extends Citizen{
         super("Detective");
     }
 
-    @Override
-    public void act(Game game) {
 
-    }
 }
