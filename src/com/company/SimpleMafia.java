@@ -4,10 +4,8 @@ public class SimpleMafia extends Mafia{
 
     public SimpleMafia(){
         super("Havij Mafia");
+        this.hasPower = false;
     }
 
-    @Override
-    public void act(Game game) {
 
-    }
 }
