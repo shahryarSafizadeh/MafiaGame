@@ -8,7 +8,7 @@ import java.net.Socket;
  * connection class is for reading chats for client before client starts to chat
  * it implements Runnable
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Connection implements Runnable{
     /**

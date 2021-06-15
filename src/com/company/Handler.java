@@ -10,7 +10,7 @@ import java.util.Collections;
 /**
  * client handler class for handling all the clients including game modes : day , voting , night
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Handler implements Runnable{
     /**
@@ -84,7 +84,7 @@ public class Handler implements Runnable{
                 if (!isReady){
                     register();
                     server.increaseReadyPlayers();
-                    sendToCLient("Waiting for other players to join..." , this);
+                    sendToCLient("[GOD]:Waiting for other players to join..." , this);
                 }
                 //running chat modes
                 if (server.areAllPlayersReady()) {
@@ -94,21 +94,25 @@ public class Handler implements Runnable{
                             //first night things
                             firstNight();
                             this.server.getGame().setMode(Mode.FREECHAT);
+//                            this.wait(1000);
                             this.mode = Mode.FREECHAT;
                         case FREECHAT:
                             //free chat things
                             freeChat();
                             everyOneCanSpeak();
+//                            this.wait(1000);
                             this.mode = Mode.VOTING;
                         case VOTING:
                             //voting things
                             voting();
                             resetVoting();
-                            this.mode =  Mode.FREECHAT;
+//                            this.wait(1000);
+                            this.mode =  Mode.NIGHT;
                         case NIGHT:
                             //night things
                             night();
                             resetNewDead();
+//                            this.wait(1000);
                             if (checkEnd())
                                 return;
                             this.mode = Mode.FREECHAT;
@@ -304,67 +308,76 @@ public class Handler implements Runnable{
                 }
             }
         }
-
-        int countAlive=0;
-        int allAlive = getAllAlive();
-
-        if (this.isAlive && this.getShot<1){
+        int countDead;
+        //nobody dies
+        if (isEveryOneAlive()){
             sendToCLient("[GOD]:Calculating last night things..." , this);
-            countAlive++;
-            if (countAlive!=allAlive) {
-                synchronized (this) {
+            Thread.sleep(1000);
+            nightAnnounce();
+            if (gameHasRole("Badkooft")) {
+                if (this.role instanceof Badkooft && this.isAlive){
+                    if (((Badkooft) this.role).isHasAsked()){
+                        sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+                        badkooftAnnounce();
+                        ((Badkooft) this.role).setHasAsked(false);
+                    }
+                }
+            }
+        }else { // we have dead player
+            if (this.isAlive && this.getShot<1){
+                sendToCLient("[GOD]:Calculating last night things..." , this);
+                synchronized (this){
                     this.wait();
                 }
             }
-        }
-
-        int countDead=0;
-
-        for (Handler client : clients) {
-            if (client.isAlive && client.getShot > 0) {
-                client.newDead=true;
-                sendToCLient("[GOD]:You have been killed last night , for watching the rest of the game type 1.", client);
-                String choice = client.in.readUTF();
-                client.canRecieve = choice.equals("1");
-                client.isAlive = false;
-                countDead++;
+            countDead=0;
+            for (Handler client : clients) {
+                if (client.isAlive && client.getShot > 0) {
+                    client.newDead=true;
+                    sendToCLient("[GOD]:You have been killed last night , for watching the rest of the game type 1 else 2.", client);
+                    String choice = client.in.readUTF();
+                    client.canRecieve = choice.equals("1");
+                    client.isAlive = false;
+                    countDead++;
+                }
             }
-        }
-
-        if (calculateNewDead()==0){
-            synchronized (this) {
-                for (Handler c : clients) {
-                    if (c.isAlive) {
-                        synchronized (c) {
-                            c.notify();
+            if (countDead==calculateNewDead()) {
+                synchronized (this) {
+                    for (Handler c : clients) {
+                        if (c.isAlive) {
+                            synchronized (c) {
+                                c.notify();
+                            }
                         }
                     }
                 }
             }
-        }else if (calculateNewDead()!=0 && countDead==calculateNewDead()) {
-            synchronized (this) {
-                for (Handler c : clients) {
-                    if (c.isAlive) {
-                        synchronized (c) {
-                            c.notify();
-                        }
+
+            nightAnnounce();
+
+            if (gameHasRole("Badkooft")) {
+                if (this.role instanceof Badkooft && this.isAlive){
+                    if (((Badkooft) this.role).isHasAsked()){
+                        sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+                        badkooftAnnounce();
+                        ((Badkooft) this.role).setHasAsked(false);
                     }
                 }
             }
         }
+    }
 
-        nightAnnounce();
-
-        if (gameHasRole("Badkooft")) {
-            if (this.role instanceof Badkooft && this.isAlive){
-                if (((Badkooft) this.role).isHasAsked()){
-                    sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
-                    badkooftAnnounce();
-                    ((Badkooft) this.role).setHasAsked(false);
-                }
+    /**
+     * check if no one died last night
+     * @return if no one died : true else false
+     */
+    public boolean isEveryOneAlive(){
+        for (Handler client :clients){
+            if (client.isAlive && client.getShot > 0){
+                return false;
             }
         }
-
+        return true;
     }
 
     /**
@@ -689,6 +702,7 @@ public class Handler implements Runnable{
         //announcing them and creating their chatroom for only 30 seconds
         sendToCLient("[GOD]:You have 30 seconds for consulting!" , this);
         long start = System.currentTimeMillis();
+//        long end = start + 30*1000;
         long end = start + 7 * 1000;
         String line;
         int bytes = 0;
@@ -828,7 +842,8 @@ public class Handler implements Runnable{
      */
     public  void startVoting() throws IOException {
         long start = System.currentTimeMillis();
-        long end = start + 20*1000;
+//        long end = start + 30*1000;
+        long end = start + 15*1000;
         String line;
         int bytes = 0;
         while (System.currentTimeMillis()<end){
@@ -856,7 +871,7 @@ public class Handler implements Runnable{
      * @throws IOException
      * @throws InterruptedException
      */
-    public  boolean voting() throws IOException, InterruptedException {
+    public boolean voting() throws IOException, InterruptedException {
         sendToCLient("\n[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!\n" , this);
         sendToCLient("[GOD]:This is list of players :\n" , this);
         //showing players list
@@ -1079,7 +1094,8 @@ public class Handler implements Runnable{
     public void freeChat()throws IOException {
         sendToCLient("\n[GOD]:DAY CHAT TIMES START!\n" , this);
         long start = System.currentTimeMillis();
-        long end = start + 7 * 1000;
+//        long end = start + 5 * 60 * 1000;
+        long end = start + 30 * 1000;
         String line;
         int bytes = 0;
         while (System.currentTimeMillis()< end) {

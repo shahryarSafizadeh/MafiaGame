@@ -12,7 +12,7 @@ import java.util.concurrent.Executors;
 /**
  * server class for sending clients to client handler
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Server {
     /**
@@ -114,7 +114,7 @@ public class Server {
             else
                 break;
         }
-        Server server = new Server(6969 , count);
+        Server server = new Server(3232 , count);
     }
 
 }

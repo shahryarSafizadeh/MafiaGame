@@ -10,7 +10,7 @@ import java.util.Scanner;
 /**
  * class for client
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Client {
     /**

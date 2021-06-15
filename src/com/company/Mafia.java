@@ -3,7 +3,7 @@ package com.company;
 /**
  * abstract class for mafia roles
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public abstract class Mafia extends Role{
     /**

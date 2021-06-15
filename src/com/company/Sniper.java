@@ -3,7 +3,7 @@ package com.company;
 /**
  * class for sniper role
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Sniper extends Citizen{
     /**

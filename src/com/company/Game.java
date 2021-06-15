@@ -4,7 +4,7 @@ import java.util.*;
 /**
  * Game class for making roles and the game
  * @author shahryarsz
- * @version 1.0
+ * @version 1.1
  */
 public class Game {
     /**
