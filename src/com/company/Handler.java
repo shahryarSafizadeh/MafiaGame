@@ -1,22 +1,18 @@
 package com.company;
 
-import javax.print.Doc;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
-import java.sql.Struct;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Timer;
-import java.util.TimerTask;
 
 public class Handler implements Runnable{
 
     private Socket socket;
     private Server server;
     protected DataOutputStream out;
-    private DataInputStream in;
+    protected DataInputStream in;
     private String name;
     private Role role;
     private ArrayList<Handler> clients;
@@ -29,7 +25,8 @@ public class Handler implements Runnable{
     private int votes;
     private Handler votesTo;
     private boolean isAlive;
-    private int getShot;
+    public int getShot;
+    private boolean newDead;
 
     public String getName() {
         return name;
@@ -75,22 +72,21 @@ public class Handler implements Runnable{
                             this.server.getGame().setMode(Mode.FREECHAT);
                             this.mode = Mode.FREECHAT;
                         case FREECHAT:
-                            //freechat things
+                            //free chat things
                             freeChat();
                             everyOneCanSpeak();
                             this.mode = Mode.VOTING;
                         case VOTING:
                             //voting things
                             voting();
-                            resetVoting();
-                            this.mode =  Mode.NIGHT;
+                            this.mode =  Mode.FREECHAT;
                         case NIGHT:
                             //night things
-                            night();
-                            ArrayList<Handler> deadPlayers = nightKills();
-                            Handler silentPlayer = silentClient();
-                            announceNightThings(deadPlayers , silentPlayer);
-                            this.mode = Mode.FREECHAT;
+//                            night();
+//                            resetNewDead();
+//                            if (checkEnd())
+//                                return;
+//                            this.mode = Mode.FREECHAT;
                     }
                 }
 
@@ -102,17 +98,14 @@ public class Handler implements Runnable{
         }
     }
 
-    public  boolean night() throws IOException, InterruptedException {
+    public  void night() throws IOException, InterruptedException {
         sendToCLient("[GOD]:Its night . Please close your eyes." , this);
-//        silentEveryOne();
-
 
         //mafia thing
         if (this.role instanceof Citizen && this.isAlive){
             sendToCLient("[GOD]:Waking up Mafia team..." , this);
             synchronized (this){
                 this.wait();
-//                return true;
             }
         }
 
@@ -142,7 +135,7 @@ public class Handler implements Runnable{
                     lecterAct();
                 }
                 else {
-                    Thread.sleep(7000);
+                    Thread.sleep(5000);
                 }
                 synchronized (this) {
                     for (Handler c : clients){
@@ -162,14 +155,13 @@ public class Handler implements Runnable{
             sendToCLient("[GOD]:Waking up Doctor..." , this);
             synchronized (this){
                 this.wait();
-//                return true;
             }
         }
         if (this.role instanceof Doctor){
             if (this.isAlive) {
                 doctorAct();
             } else {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             }
             synchronized (this) {
                 for (Handler c : clients){
@@ -194,7 +186,7 @@ public class Handler implements Runnable{
             if (this.isAlive) {
                 detectiveAct();
             } else {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             }
             synchronized (this) {
                 for (Handler c : clients){
@@ -218,7 +210,7 @@ public class Handler implements Runnable{
             if (this.isAlive)
                 sniperAct();
             else {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             }
             synchronized (this) {
                 for (Handler c : clients){
@@ -243,7 +235,7 @@ public class Handler implements Runnable{
                 if (this.isAlive)
                     psychologistAct();
                 else
-                    Thread.sleep(7000);
+                    Thread.sleep(5000);
 
                 synchronized (this) {
                     for (Handler c : clients){
@@ -260,7 +252,7 @@ public class Handler implements Runnable{
 
         //badkooft things
         if (gameHasRole("Badkooft")){
-            if (!(this.role instanceof Sniper) && this.isAlive){
+            if (!(this.role instanceof Badkooft) && this.isAlive){
                 sendToCLient("[GOD]:Waking up Badkooft..." , this);
                 synchronized (this){
                     this.wait();
@@ -270,7 +262,7 @@ public class Handler implements Runnable{
                 if (this.isAlive)
                     badkooftAct();
                 else
-                    Thread.sleep(7000);
+                    Thread.sleep(5000);
 
                 synchronized (this) {
                     for (Handler c : clients){
@@ -284,34 +276,106 @@ public class Handler implements Runnable{
             }
         }
 
+        int countAlive=0;
+        int allAlive = getAllAlive();
 
+        if (this.isAlive && this.getShot<1){
+            sendToCLient("[GOD]:Calculating last night things..." , this);
+            countAlive++;
+            if (countAlive!=allAlive) {
+                synchronized (this) {
+                    this.wait();
+                }
+            }
+        }
 
-//        synchronized (this) {
-//            for (Handler c : clients){
-//                if ( c.isAlive){
-//                    synchronized (c) {
-//                        c.notify();
-//                    }
-//                }
+        int countDead=0;
+
+        for (Handler client : clients) {
+            if (client.isAlive && client.getShot > 0) {
+                client.newDead=true;
+                sendToCLient("[GOD]:You have been killed last night , for watching the rest of the game type 1.", client);
+                String choice = client.in.readUTF();
+                client.canRecieve = choice.equals("1");
+                client.isAlive = false;
+                countDead++;
+            }
+        }
+
+        if (calculateNewDead()==0){
+            synchronized (this) {
+                for (Handler c : clients) {
+                    if (c.isAlive) {
+                        synchronized (c) {
+                            c.notify();
+                        }
+                    }
+                }
+            }
+        }else if (calculateNewDead()!=0 && countDead==calculateNewDead()) {
+            synchronized (this) {
+                for (Handler c : clients) {
+                    if (c.isAlive) {
+                        synchronized (c) {
+                            c.notify();
+                        }
+                    }
+                }
+            }
+        }
+
+        nightAnnounce();
+
+        if (gameHasRole("Badkooft")) {
+            if (this.role instanceof Badkooft && this.isAlive){
+                if (((Badkooft) this.role).isHasAsked()){
+                    sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+                    badkooftAnnounce();
+                    ((Badkooft) this.role).setHasAsked(false);
+                }
+            }
+//            Handler badKooft = findPlayerByRole("Badkooft");
+//
+//            if (((Badkooft) badKooft.role) != null && ((Badkooft) badKooft.role).isHasAsked()) {
+//                sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+//                badkooftAnnounce();
 //            }
-//        }
-        sendToCLient("DEAD DONE" , this);
-        sendToCLient("SILENT DONE" , this);
-        sendToCLient("FUCK YOU" , this);
 //
-//
-//        Handler badKooft = findPlayerByRole("Badkooft");
-//        if (((Badkooft)badKooft.role)!=null && ((Badkooft)badKooft.role).isHasAsked()){
-//            badkooftAnnounce();
-//        }
-//
-//        if (this.role instanceof Badkooft){
-//            ((Badkooft) this.role).setHasAsked(false);
-//        }
+//            if (this.role instanceof Badkooft) {
+//                ((Badkooft) this.role).setHasAsked(false);
+//            }
+        }
 
+    }
+
+    public int getAllAlive() {
+        int count=0;
+        for (Handler c : clients){
+            if (c.isAlive)
+                count++;
+        }
+        return count;
+    }
+
+    public boolean checkEnd()throws IOException{
+        int mafias = 0 , citizens = 0;
+        for (Handler client : clients){
+            if (client.isAlive){
+                if (client.role.isMafia)
+                    mafias++;
+                else
+                    citizens++;
+            }
+        }
+
+        if (mafias>=citizens && this.canRecieve){
+            sendToCLient("[GOD]:Game is over! MAFIA WON!!!", this);
+            return true;
+        }else if (mafias==0 && this.canRecieve){
+            sendToCLient("[GOD]:Game is over! CITIZEN WON!!!" , this);
+            return true;
+        }
         return false;
-
-
     }
 
     public void badkooftAnnounce() throws IOException {
@@ -322,7 +386,7 @@ public class Handler implements Runnable{
             }
         }
         Collections.shuffle(deadPlayers);
-        sendToCLient("[GOD]:This roles aren't in the game anymore:" , this);
+        sendToCLient("[GOD]:This roles aren't in the game anymore:\n" , this);
         int i=1;
         for (Handler client : deadPlayers){
             sendToCLient("  "+i+")"+client.getRole().name , this);
@@ -330,59 +394,47 @@ public class Handler implements Runnable{
         }
     }
 
-    public void announceNightThings(ArrayList<Handler> deadPlayers , Handler silentPlayer) throws IOException {
+    public void resetNewDead(){
+        for (Handler client : clients){
+            client.newDead=false;
+        }
+    }
+
+    public synchronized void nightAnnounce()throws IOException{
         sendToCLient("\n[GOD]:Last night this things happened:\n" , this);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        if (deadPlayers.size()>0){
+        if (calculateNewDead()>0){
             sendToCLient("  -[GOD]:This players died last night:" , this);
             int i=1;
-            for (Handler client : deadPlayers){
-                sendToCLient("      "+i+")"+client.name , this);
-                i++;
+            for (Handler client : clients){
+                if (client.newDead) {
+                    sendToCLient("      " + i + ")" + client.name, this);
+                    i++;
+                }
             }
         }else {
             sendToCLient("[GOD]:Nobody died last night." , this);
         }
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        if (silentPlayer!=null){
-            sendToCLient("  -[GOD]:And " + silentPlayer.getName() + " is silent." , this);
-        }
-    }
 
-    public synchronized ArrayList <Handler> nightKills() throws IOException, InterruptedException {
-        ArrayList<Handler> deadPlayers = new ArrayList<>();
-        for (Handler client : clients){
-            if (client.isAlive && client.getShot>0){
-                client.isAlive = false;
-                deadPlayers.add(client);
-//                sendToCLient("[GOD]:You have been killed last night , if you want to see the rest of the game type 1 else 2." , client);
-//                String choice =client.in.readUTF();
-//                client.canRecieve = choice.equals("1");
-            }
-//            else {
-//                synchronized (this){
-//                    wait();
-//                }
-//            }
-        }
-        return deadPlayers;
-    }
-
-    public synchronized Handler silentClient(){
         for (Handler client : clients){
             if (client.isAlive && !client.canSpeak){
-                return client;
+                sendToCLient("  -[GOD]:And " + client.getName() + " is silent today." , this);
             }
         }
-        return null;
+
+    }
+
+    public int calculateNewDead(){
+        int count=0;
+        for (Handler cleint : clients){
+            if (cleint.newDead)
+                count++;
+        }
+        return count;
     }
 
     public boolean gameHasRole(String roleName){
@@ -392,15 +444,6 @@ public class Handler implements Runnable{
 
         }
         return false;
-    }
-
-    public void silentEveryOne(){
-        for (Handler client : clients){
-            if (client.isAlive){
-                client.canRecieve = false;
-                client.canSpeak = false;
-            }
-        }
     }
 
     public void everyOneCanSpeak(){
@@ -422,7 +465,7 @@ public class Handler implements Runnable{
         }else {
             sendToCLient("[GOD]:You cant ask about night things anymore!" , this);
             try {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -438,7 +481,7 @@ public class Handler implements Runnable{
                     sendToCLient("[GOD]:Which player you want to silent?" , this);
                     String name = in.readUTF();
                     Handler player = findPlayerByName(name);
-                    if (player.isAlive && player!=null){
+                    if ( player!=null && player.isAlive){
                         player.canSpeak = false;
                         ((Psychologist) this.role).setCanSilent();
                         break;
@@ -450,7 +493,7 @@ public class Handler implements Runnable{
         }else {
             sendToCLient("[GOD]:You cant silent anymore!" , this);
             try {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -459,24 +502,25 @@ public class Handler implements Runnable{
 
     public void sniperAct() throws IOException{
         if (((Sniper)this.role).getHasShot()!= 0){
-            sendToCLient("[GOD]:You have one shot , if you want to take your shot type 1 else type 2." , this);
+            sendToCLient("[GOD]:You have one shot , if you want to take your shot type 1." , this);
             String choice =  in.readUTF();
             if (choice.equals("1")){
                 while (true){
                     sendToCLient("[GOD]:Which player you want to shoot?" , this);
                     String name = in.readUTF();
                     Handler player = findPlayerByName(name);
-                    if (player!=null && player.isAlive){
-                        if (player.role instanceof Badkooft ){
-                            if (((Badkooft) player.role).getHasArmor()>0) {
-                                ((Badkooft) player.role).setHasArmor(0);
-                                ((Sniper) this.role).setHasShot(0);
-                                break;
-                            }
+                    if (player!=null && player.isAlive && !player.name.equals(this.name)){
+                        if (player.role instanceof Citizen){
+                            sendToCLient("[GOD]:You shot one of citizens and now you are dead.if you want see the rest of the game type 1 else 2." , this);
+                            String choice1 = in.readUTF();
+                            this.canRecieve = choice1.equals("1");
+                            this.isAlive = false;
+                            break;
+                        }else {
+                            shot(player);
+                            ((Sniper) this.role).setHasShot(0);
+                            break;
                         }
-                        shot(player);
-                        ((Sniper) this.role).setHasShot(0);
-                        break;
                     }else {
                         sendToCLient("[GOD]:Wrong input." , this);
                     }
@@ -485,7 +529,7 @@ public class Handler implements Runnable{
         }else {
             sendToCLient("[GOD]:You cant shoot anymore!" , this);
             try {
-                Thread.sleep(7000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -497,75 +541,115 @@ public class Handler implements Runnable{
         String choice;
         while (true){
             choice = in.readUTF();
-            if (findPlayerByName(choice).role instanceof Citizen || findPlayerByName(choice).role instanceof GodFather){
+            if (findPlayerByName(choice) == null || findPlayerByName(choice).name.equals(this.name)){
+                sendToCLient("[GOD]:Wrong input." , this);
+            }else if (findPlayerByName(choice).role instanceof Citizen || findPlayerByName(choice).role instanceof GodFather){
                 sendToCLient("[GOD]:This player is not mafia." , this);
                 break;
             }else if (findPlayerByName(choice).role instanceof Mafia){
                 sendToCLient("[GOD]:This player is mafia." , this);
                 break;
-            }else if (findPlayerByName(choice) == null){
-                sendToCLient("[GOD]:Wrong input." , this);
             }
         }
     }
 
     public void lecterAct() throws IOException {
-        if (((DoctorLecter)this.role).getCanHeal()!=0){
-            sendToCLient("[GOD]:If you want to heal one of mafias type 1 else type 2." , this);
-            String choice = in.readUTF();
-            if (choice.equals("1")){
-                while (true) {
-                    sendToCLient("[GOD]:Which mafia you want to heal?", this);
-                    String name = in.readUTF();
-                    Handler player = findPlayerByName(name);
-                    if (player != null && player.role.isMafia && player.isAlive) {
-                        player.getShot--;
-                        ((DoctorLecter) this.role).setCanHeal(0);
-                        break;
-                    }else {
-                        sendToCLient("[GOD]:Wrong input!" , this);
-                    }
+        while (true) {
+            sendToCLient("[GOD]:Which mafia you want to heal?", this);
+            String name = in.readUTF();
+            Handler player = findPlayerByName(name);
+            if (player!=null && player.role instanceof DoctorLecter){
+                if (((DoctorLecter) player.role).getCanHeal()!=0){
+                    player.getShot--;
+                    ((DoctorLecter) this.role).setCanHeal(0);
+                    break;
+                }else {
+                    sendToCLient("[GOD]:You cant heal your self anymore." , this);
                 }
-            }
-        }else{
-            sendToCLient("[GOD]:You cant heal anymore" , this);
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else if (player!=null && player.role.isMafia && player.isAlive){
+                player.getShot--;
+                ((DoctorLecter) this.role).setCanHeal(0);
+                break;
+            }else {
+                sendToCLient("[GOD]:Wrong input!" , this);
             }
         }
+//        if (((DoctorLecter)this.role).getCanHeal()!=0){
+//            sendToCLient("[GOD]:If you want to heal one of mafias type 1 else type 2." , this);
+//            String choice = in.readUTF();
+//            if (choice.equals("1")){
+//                while (true) {
+//                    sendToCLient("[GOD]:Which mafia you want to heal?", this);
+//                    String name = in.readUTF();
+//                    Handler player = findPlayerByName(name);
+//                    if (player != null && player.role.isMafia && player.isAlive) {
+//                        player.getShot--;
+//                        ((DoctorLecter) this.role).setCanHeal(0);
+//                        break;
+//                    }else {
+//                        sendToCLient("[GOD]:Wrong input!" , this);
+//                    }
+//                }
+//            }
+//        }else{
+//            sendToCLient("[GOD]:You cant heal anymore" , this);
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
     public void doctorAct()throws IOException{
-        if (((Doctor)this.role).getCanHeal()!=0){
-            sendToCLient("[GOD]:If you want to heal one of the players type 1 else type 2." , this);
-            String choice = in.readUTF();
-            if (choice.equals("1")){
-                while (true) {
-                    sendToCLient("[GOD]:Which player you want to heal?", this);
-                    String name = in.readUTF();
-                    Handler player = findPlayerByName(name);
-                    if (player != null && player.isAlive) {
-                        player.getShot--;
-                        ((Doctor) this.role).setCanHeal(0);
-                        break;
-                    }else {
-                        sendToCLient("[GOD]:Wrong input!" , this);
-                    }
+        while (true) {
+            sendToCLient("[GOD]:Which player you want to heal?", this);
+            String name = in.readUTF();
+            Handler player = findPlayerByName(name);
+            if (player!=null && player.role instanceof Doctor){
+                if (((Doctor) player.role).getCanHeal()!=0){
+                    player.getShot--;
+                    ((Doctor) this.role).setCanHeal(0);
+                    break;
+                }else {
+                    sendToCLient("[GOD]:You cant heal your self anymore." , this);
                 }
-            }
-        }else {
-            sendToCLient("[GOD]:You cant heal anymore" , this);
-            try {
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
+            }else if (player!=null && player.isAlive){
+                player.getShot--;
+                ((Doctor) this.role).setCanHeal(0);
+                break;
+            }else {
+                sendToCLient("[GOD]:Wrong input!" , this);
             }
         }
+//        if (((Doctor)this.role).getCanHeal()!=0){
+//            sendToCLient("[GOD]:If you want to heal one of the players type 1 else type 2." , this);
+//            String choice = in.readUTF();
+//            if (choice.equals("1")){
+//                while (true) {
+//                    sendToCLient("[GOD]:Which player you want to heal?", this);
+//                    String name = in.readUTF();
+//                    Handler player = findPlayerByName(name);
+//                    if (player != null && player.isAlive) {
+//                        player.getShot--;
+//                        ((Doctor) this.role).setCanHeal(0);
+//                        break;
+//                    }else {
+//                        sendToCLient("[GOD]:Wrong input!" , this);
+//                    }
+//                }
+//            }
+//        }else {
+//            sendToCLient("[GOD]:You cant heal anymore" , this);
+//            try {
+//                Thread.sleep(5000);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
-    public  void mafiaAct() throws IOException {
+    public void mafiaAct() throws IOException {
         //Citizens sleeping
         for (Handler client : clients){
             if (client.role instanceof Citizen && client.isAlive){
@@ -576,7 +660,7 @@ public class Handler implements Runnable{
         //announcing them and creating their chatroom for only 30 seconds
         sendToCLient("[GOD]:You have 30 seconds for consulting!" , this);
         long start = System.currentTimeMillis();
-        long end = start + 2 * 1000;
+        long end = start + 7 * 1000;
         String line;
         int bytes = 0;
         while (System.currentTimeMillis()< end) {
@@ -605,7 +689,7 @@ public class Handler implements Runnable{
                 while (true) {
                     mafiasChoice = in.readUTF();
                     Handler client = findPlayerByName(mafiasChoice);
-                    if (client!=null){
+                    if (client!=null && client.isAlive){
                         if (client.role instanceof Badkooft){
                             if (((Badkooft) client.role).getHasArmor()>0) {
                                 ((Badkooft) client.role).setHasArmor(0);
@@ -615,7 +699,7 @@ public class Handler implements Runnable{
                         shot(client);
                         break;
                     }else {
-                        sendToCLient("Wrong input!" , this);
+                        sendToCLient("[GOD]:Wrong input!" , this);
                     }
                 }
             } else {
@@ -643,11 +727,11 @@ public class Handler implements Runnable{
         Handler godFather = findPlayerByRole("God father");
         Handler doctorLecter = findPlayerByRole("Doctor lecter");
         Handler simpleMafia = findPlayerByRole("Havij Mafia");
-        if (godFather.isAlive && godFather!=null){
+        if ( godFather!=null && godFather.isAlive ){
             ((Mafia)godFather.role).hasPower = true;
-        }else if (doctorLecter.isAlive && doctorLecter!=null){
+        }else if ( doctorLecter!=null && doctorLecter.isAlive){
             ((Mafia)doctorLecter.role).hasPower = true;
-        }else if (simpleMafia.isAlive && simpleMafia!=null){
+        }else if (simpleMafia!=null && simpleMafia.isAlive){
             ((Mafia)simpleMafia.role).hasPower = true;
         }
     }
@@ -683,9 +767,9 @@ public class Handler implements Runnable{
         this.votesTo = votesTo;
     }
 
-    public void startVoting() throws IOException {
+    public  void startVoting() throws IOException {
         long start = System.currentTimeMillis();
-        long end = start + 2*1000;
+        long end = start + 30*1000;
         String line;
         int bytes = 0;
         while (System.currentTimeMillis()<end){
@@ -695,7 +779,6 @@ public class Handler implements Runnable{
                 System.out.println(line);
                 if (submitVote(line)) {
                     sendToCLient("[GOD]:You successfully voted!" , this);
-                    //changing vote ---------> remember to done
                 } else {
                     sendToCLient("[GOD]:Wrong input!Try again." , this);
                 }
@@ -703,8 +786,8 @@ public class Handler implements Runnable{
         }
     }
 
-    public boolean voting()throws IOException{
-        sendToCLient("[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!" , this);
+    public  boolean voting() throws IOException, InterruptedException {
+        sendToCLient("\n[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!\n" , this);
         sendToCLient("[GOD]:This is list of players :\n" , this);
         //showing players list
         showPlayersList();
@@ -717,14 +800,17 @@ public class Handler implements Runnable{
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         //showing the results
         showVotes();
+
         //final voting stuff
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
         Handler client = whoToLeave();
 //        String choice="";
         if (client==null)
@@ -741,6 +827,17 @@ public class Handler implements Runnable{
                     }
                 }
             }
+//            if (this.role instanceof Mayor ){
+//                if (this.isAlive)
+//                    mayorAct(client);
+//                else {
+//                    client.isAlive=false;
+//                    sendToCLient("[GOD]:Mayor voted to kill you. if you wanna see the rest of game type 1" , client);
+//                    String choice1 =client.in.readUTF();
+//                    client.canRecieve = choice1.equals("1");
+//                    sendToAll("GOD" , client.getName() + " died.");
+//                }
+//            }
             if (this.role instanceof Mayor && this.isAlive){
                 mayorAct(client);
             }else if (this.role instanceof Mayor && !this.isAlive){
@@ -835,7 +932,7 @@ public class Handler implements Runnable{
     }
 
     //showing voting results
-    public void showVotes()throws IOException{
+    public  void showVotes()throws IOException{
         int i=1;
         for (Handler c : clients){
             if (c.isAlive){
@@ -854,11 +951,12 @@ public class Handler implements Runnable{
     }
 
     //submitting a vote
-    public boolean submitVote(String name){
+    public  boolean submitVote(String name){
         if (this.name.equals(name))
             return false;
         for (Handler client : clients){
             if (client.name.equals(name) && client.isAlive){
+//                setVotesTo(client);
                 this.votesTo = client;
                 client.votes++;
                 return true;
@@ -880,8 +978,9 @@ public class Handler implements Runnable{
 
     //free chat things
     public void freeChat()throws IOException {
+        sendToCLient("\n[GOD]:DAY CHAT TIMES START!\n" , this);
         long start = System.currentTimeMillis();
-        long end = start + 10 * 1000;
+        long end = start + 7 * 1000;
         String line;
         int bytes = 0;
         while (System.currentTimeMillis()< end) {
@@ -893,7 +992,7 @@ public class Handler implements Runnable{
                     quit();
                     return;
                 }
-                if (this.canSpeak)
+                if (this.canSpeak && this.isAlive)
                     sendToAll(this.name, line);
                 else {
                     sendToCLient("[GOD]:You can't chat!" , this);
@@ -940,29 +1039,20 @@ public class Handler implements Runnable{
     //finding a player by its role
     public Handler findPlayerByRole(String role){
         for (Handler client : clients){
-            if (client.getRole().name.equals(role)){
+            if (client.isAlive && client.getRole().name.equals(role)){
                 return client;
             }
         }
         return null;
     }
 
-
     //for quiting from the chat ------------> has very very things to do
     public void quit() throws IOException{
         sendToCLient("You left the game! if you want to see the rest of chat press 1 else 2!" , this);
-        while (true) {
-            String command = in.readUTF();
-            if (!command.isBlank() && command.equals("1")) {
-                this.canRecieve = true;
-                break;
-            } else if (!command.isBlank() && command.equals("2")) {
-                this.canRecieve = false;
-                break;
-            }
-            sendToCLient("Wrong input." , this);
-        }
+        String command = in.readUTF();
+        this.canRecieve = command.equals("1");
         this.canSpeak = false;
+        this.isAlive = false;
         sendToAll("GOD" , this.name +" left the game!");
     }
 
