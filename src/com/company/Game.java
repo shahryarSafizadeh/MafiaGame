@@ -1,10 +1,15 @@
 package com.company;
-
-import java.net.Socket;
 import java.util.*;
 
+/**
+ * Game class for making roles and the game
+ * @author shahryarsz
+ * @version 1.0
+ */
 public class Game {
-
+    /**
+     * game fields
+     */
     private ArrayList<Role> roles;
     private ArrayList<Handler> clients;
     private int playerCount;
@@ -12,7 +17,10 @@ public class Game {
     private Mode mode;
     private Server server;
 
-
+    /**
+     * simple constructor for the game by giving the server
+     * @param server
+     */
     public Game(Server server) {
         this.server = server;
         this.roles = new ArrayList<>();
@@ -22,18 +30,28 @@ public class Game {
         this.mode = Mode.FIRSTNIGHT;
     }
 
-
+    /**
+     * getting game mode
+     * @return
+     */
     public Mode getMode() {
         return mode;
     }
 
+    /**
+     * setting game mode
+     * @param mode
+     */
     public void setMode(Mode mode) {
         this.mode = mode;
     }
 
+    /**
+     * role maker for the game
+     * @param playerCount players count
+     * @return array list of making roles
+     */
     public synchronized ArrayList<Role> roleMaker(int playerCount){
-        System.out.println("!!!!!!FUCKING METHOD CALLED!!!!!!");
-        HashMap<Handler , Role> players1 = new HashMap<>();
         int mc = 0;
         //making mafias
         while (mc<this.mafiaCount) {
@@ -100,5 +118,7 @@ public class Game {
         return this.roles;
     }
 
-
+    public int getMafiaCount() {
+        return mafiaCount;
+    }
 }

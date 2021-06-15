@@ -5,14 +5,27 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.util.Scanner;
 
+/**
+ * class for client
+ * @author shahryarsz
+ * @version 1.0
+ */
 public class Client {
-
+    /**
+     * fields of client socket
+     */
     private Socket socket;
     private DataOutputStream out;
     private BufferedReader br;
     private Connection connection;
 
+    /**
+     * constructor for creating and doing client tasks
+     * @param address server address
+     * @param port server port
+     */
     public Client(String address , int port ){
         try {
             socket = new Socket(address , port);
@@ -44,8 +57,15 @@ public class Client {
         }
     }
 
+    /**
+     * main method for running a client
+     * @param args
+     */
     public static void main(String[] args) {
-        Client client = new Client("127.0.0.1"  , 8585 );
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Please enter server port");
+        int port = scanner.nextInt();
+        Client client = new Client("127.0.0.1"  , port );
     }
 
 }

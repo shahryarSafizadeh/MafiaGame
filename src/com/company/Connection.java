@@ -4,11 +4,23 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.net.Socket;
 
+/**
+ * connection class is for reading chats for client before client starts to chat
+ * it implements Runnable
+ * @author shahryarsz
+ * @version 1.0
+ */
 public class Connection implements Runnable{
-
+    /**
+     * connection fields
+     */
     private Socket socket;
     private DataInputStream in;
 
+    /**
+     * simple constructor for making connection for client socket
+     * @param socket client socket
+     */
     public Connection(Socket socket){
         try {
             this.socket = socket;
@@ -18,6 +30,9 @@ public class Connection implements Runnable{
         }
     }
 
+    /**
+     * overriding run method for connection
+     */
     @Override
     public void run() {
         String line="";

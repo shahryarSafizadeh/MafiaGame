@@ -1,16 +1,23 @@
 package com.company;
 
+/**
+ * abstract class for role
+ * @author shahryarsz
+ * @version 1.0
+ */
 public abstract class Role {
-
+    /**
+     * role fields
+     */
     protected String name;
     protected boolean isMafia;
-    protected boolean canSpeak;
-    protected boolean canRecieve;
 
+    /**
+     * simple constructor
+     * @param name role name
+     */
     public Role(String name){
         this.name = name;
-        this.canRecieve = false;
-        this.canSpeak = false;
     }
 
 }

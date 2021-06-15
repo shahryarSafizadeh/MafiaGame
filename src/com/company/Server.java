@@ -5,22 +5,33 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Scanner;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * server class for sending clients to client handler
+ * @author shahryarsz
+ * @version 1.0
+ */
 public class Server {
-
+    /**
+     * server fields
+     */
     private ServerSocket server;
     private Socket socket;
     private int playerCount;
     private ArrayList<Handler> clients = new ArrayList<>();
     private ExecutorService pool ;
     private int readyPlayers = 0;
-    public Game game;
+    private Game game;
     private ArrayList<Role> roles;
 
+    /**
+     * constructor for making connection between clients and server
+     * @param port server port
+     * @param playerCount game players count
+     */
     public Server(int port , int playerCount){
         try {
             server = new ServerSocket(port);
@@ -41,31 +52,57 @@ public class Server {
         }
     }
 
-
+    /**
+     * getting game
+     * @return the game
+     */
     public Game getGame() {
         return game;
     }
 
+    /**
+     * getting roles
+     * @return roles
+     */
     public ArrayList<Role> getRoles() {
         return roles;
     }
 
+    /**
+     * getting Handler list
+     * @return clients
+     */
     public ArrayList<Handler> getClients() {
         return clients;
     }
 
+    /**
+     * increasing ready players
+     */
     public void increaseReadyPlayers() {
         readyPlayers++;
     }
 
+    /**
+     * getting players count
+     * @return
+     */
     public int getPlayerCount() {
         return playerCount;
     }
 
+    /**
+     * check if everybody is ready to start the game
+     * @return if ready : true else false
+     */
     public synchronized boolean areAllPlayersReady() {
         return readyPlayers==playerCount;
     }
 
+    /**
+     * main method for running server
+     * @param args
+     */
     public static void main(String[] args) {
         int count;
         while (true) {
@@ -77,7 +114,7 @@ public class Server {
             else
                 break;
         }
-        Server server = new Server(8585 , count);
+        Server server = new Server(6969 , count);
     }
 
 }
