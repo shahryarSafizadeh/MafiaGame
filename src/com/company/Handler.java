@@ -35,6 +35,16 @@ public class Handler implements Runnable{
     public int getShot;
     private boolean newDead;
 
+    public static final String ANSI_RESET = "\u001B[0m";
+    public static final String ANSI_BLACK = "\u001B[30m";
+    public static final String ANSI_RED = "\u001B[31m";
+    public static final String ANSI_GREEN = "\u001B[32m";
+    public static final String ANSI_YELLOW = "\u001B[33m";
+    public static final String ANSI_BLUE = "\u001B[34m";
+    public static final String ANSI_PURPLE = "\u001B[35m";
+    public static final String ANSI_CYAN = "\u001B[36m";
+    public static final String ANSI_WHITE = "\u001B[37m";
+
     /**
      * getting handler name
      * @return name
@@ -84,7 +94,7 @@ public class Handler implements Runnable{
                 if (!isReady){
                     register();
                     server.increaseReadyPlayers();
-                    sendToCLient("[GOD]:Waiting for other players to join..." , this);
+                    sendToCLient(colorStr("[GOD]:Waiting for other players to join..." , "purple") , this);
                 }
                 //running chat modes
                 if (server.areAllPlayersReady()) {
@@ -132,11 +142,11 @@ public class Handler implements Runnable{
      * @throws InterruptedException
      */
     public  void night() throws IOException, InterruptedException {
-        sendToCLient("[GOD]:Its night . Please close your eyes." , this);
+        sendToCLient(colorStr("[GOD]:Its night . Please close your eyes." , "cyan"), this);
 
         //mafia thing
         if (this.role instanceof Citizen && this.isAlive){
-            sendToCLient("[GOD]:Waking up Mafia team..." , this);
+            sendToCLient(colorStr("[GOD]:Waking up Mafia team..." , "blue") , this);
             synchronized (this){
                 this.wait();
             }
@@ -158,7 +168,7 @@ public class Handler implements Runnable{
         //lecter thing
         if (gameHasRole("Doctor lecter")) {
             if (!(this.role instanceof DoctorLecter) && this.isAlive){
-                sendToCLient("[GOD]:Waking up Doctor Lecter..." , this);
+                sendToCLient(colorStr("[GOD]:Waking up Doctor Lecter..." , "blue") , this);
                 synchronized (this){
                     this.wait();
                 }
@@ -185,7 +195,7 @@ public class Handler implements Runnable{
 
         //doctor thing
         if (!(this.role instanceof Doctor) && this.isAlive){
-            sendToCLient("[GOD]:Waking up Doctor..." , this);
+            sendToCLient(colorStr("[GOD]:Waking up Doctor..." , "blue") , this);
             synchronized (this){
                 this.wait();
             }
@@ -210,7 +220,7 @@ public class Handler implements Runnable{
 
         //detective thing
         if (!(this.role instanceof Detective) && this.isAlive){
-            sendToCLient("[GOD]:Waking up Detective..." , this);
+            sendToCLient(colorStr("[GOD]:Waking up Detective..." , "blue") , this);
             synchronized (this){
                 this.wait();
             }
@@ -234,7 +244,7 @@ public class Handler implements Runnable{
 
         //sniper thing
         if (!(this.role instanceof Sniper) && this.isAlive){
-            sendToCLient("[GOD]:Waking up Sniper..." , this);
+            sendToCLient(colorStr("[GOD]:Waking up Sniper..." , "blue") , this);
             synchronized (this){
                 this.wait();
             }
@@ -259,7 +269,7 @@ public class Handler implements Runnable{
         //Psychologist things
         if (gameHasRole("Psychologist")){
             if (!(this.role instanceof Psychologist) && this.isAlive){
-                sendToCLient("[GOD]:Waking up Psychologist..." , this);
+                sendToCLient(colorStr("[GOD]:Waking up Psychologist..." , "blue") , this);
                 synchronized (this){
                     this.wait();
                 }
@@ -286,7 +296,7 @@ public class Handler implements Runnable{
         //badkooft things
         if (gameHasRole("Badkooft")){
             if (!(this.role instanceof Badkooft) && this.isAlive){
-                sendToCLient("[GOD]:Waking up Badkooft..." , this);
+                sendToCLient(colorStr("[GOD]:Waking up Badkooft..."  , "blue"), this);
                 synchronized (this){
                     this.wait();
                 }
@@ -311,13 +321,13 @@ public class Handler implements Runnable{
         int countDead;
         //nobody dies
         if (isEveryOneAlive()){
-            sendToCLient("[GOD]:Calculating last night things..." , this);
+            sendToCLient(colorStr("[GOD]:Calculating last night things..." , "blue") , this);
             Thread.sleep(1000);
             nightAnnounce();
             if (gameHasRole("Badkooft")) {
                 if (this.role instanceof Badkooft && this.isAlive){
                     if (((Badkooft) this.role).isHasAsked()){
-                        sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+                        sendToCLient(colorStr("\n[GOD]:Badkooft has asked for the dead players roles.\n" , "white") , this);
                         badkooftAnnounce();
                         ((Badkooft) this.role).setHasAsked(false);
                     }
@@ -325,7 +335,7 @@ public class Handler implements Runnable{
             }
         }else { // we have dead player
             if (this.isAlive && this.getShot<1){
-                sendToCLient("[GOD]:Calculating last night things..." , this);
+                sendToCLient(colorStr("[GOD]:Calculating last night things..." , "blue") , this);
                 synchronized (this){
                     this.wait();
                 }
@@ -334,7 +344,8 @@ public class Handler implements Runnable{
             for (Handler client : clients) {
                 if (client.isAlive && client.getShot > 0) {
                     client.newDead=true;
-                    sendToCLient("[GOD]:You have been killed last night , for watching the rest of the game type 1 else 2.", client);
+                    sendToCLient(colorStr("[GOD]:You have been killed last night , " +
+                            "for watching the rest of the game type 1 else 2." , "cyan"), client);
                     String choice = client.in.readUTF();
                     client.canRecieve = choice.equals("1");
                     client.isAlive = false;
@@ -358,7 +369,7 @@ public class Handler implements Runnable{
             if (gameHasRole("Badkooft")) {
                 if (this.role instanceof Badkooft && this.isAlive){
                     if (((Badkooft) this.role).isHasAsked()){
-                        sendToCLient("\n[GOD]:Badkooft has asked for the dead players roles.\n" , this);
+                        sendToCLient(colorStr("\n[GOD]:Badkooft has asked for the dead players roles.\n" , "white") , this);
                         badkooftAnnounce();
                         ((Badkooft) this.role).setHasAsked(false);
                     }
@@ -395,7 +406,7 @@ public class Handler implements Runnable{
 
     /**
      * checking if the game has finished or not
-     * @return
+     * @return if mafias has finished or not
      * @throws IOException
      */
     public boolean checkEnd()throws IOException{
@@ -410,10 +421,10 @@ public class Handler implements Runnable{
         }
 
         if (mafias>=citizens && this.canRecieve){
-            sendToCLient("[GOD]:Game is over! MAFIA WON!!!", this);
+            sendToCLient(colorStr("[GOD]:Game is over! MAFIA WON!!!" , "purple"), this);
             return true;
         }else if (mafias==0 && this.canRecieve){
-            sendToCLient("[GOD]:Game is over! CITIZEN WON!!!" , this);
+            sendToCLient(colorStr("[GOD]:Game is over! CITIZEN WON!!!"  , "purple"), this);
             return true;
         }
         return false;
@@ -431,10 +442,10 @@ public class Handler implements Runnable{
             }
         }
         Collections.shuffle(deadPlayers);
-        sendToCLient("[GOD]:This roles aren't in the game anymore:\n" , this);
+        sendToCLient(colorStr("[GOD]:This roles aren't in the game anymore:\n" ,"white") , this);
         int i=1;
         for (Handler client : deadPlayers){
-            sendToCLient("  "+i+")"+client.getRole().name , this);
+            sendToCLient(colorStr("  "+i+")"+client.getRole().name , "white") , this);
             i++;
         }
     }
@@ -453,28 +464,28 @@ public class Handler implements Runnable{
      * @throws IOException
      */
     public synchronized void nightAnnounce()throws IOException{
-        sendToCLient("\n[GOD]:Last night this things happened:\n" , this);
+        sendToCLient(colorStr("\n[GOD]:Last night this things happened:\n" , "white") , this);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         if (calculateNewDead()>0){
-            sendToCLient("  -[GOD]:This players died last night:" , this);
+            sendToCLient(colorStr("\n[GOD]:Last night this things happened:\n" , "white") , this);
             int i=1;
             for (Handler client : clients){
                 if (client.newDead) {
-                    sendToCLient("      " + i + ")" + client.name, this);
+                    sendToCLient(colorStr("      " + i + ")" + client.name , "white"), this);
                     i++;
                 }
             }
         }else {
-            sendToCLient("[GOD]:Nobody died last night." , this);
+            sendToCLient(colorStr("[GOD]:Nobody died last night." , "white") , this);
         }
 
         for (Handler client : clients){
             if (client.isAlive && !client.canSpeak){
-                sendToCLient("  -[GOD]:And " + client.getName() + " is silent today." , this);
+                sendToCLient(colorStr("  -[GOD]:And " + client.getName() + " is silent today." , "white") , this);
             }
         }
 
@@ -524,14 +535,14 @@ public class Handler implements Runnable{
      */
     public void badkooftAct()throws IOException{
         if (((Badkooft)this.role).getCanAsk()!=0){
-            sendToCLient("[GOD]:if you want to ask what happened at night type 1." , this);
+            sendToCLient(colorStr("[GOD]:if you want to ask what happened at night type 1." , "cyan") , this);
             String choice = in.readUTF();
             if (choice.equals("1")){
                 ((Badkooft) this.role).setCanAsk();
                 ((Badkooft) this.role).setHasAsked(true);
             }
         }else {
-            sendToCLient("[GOD]:You cant ask about night things anymore!" , this);
+            sendToCLient(colorStr("[GOD]:You cant ask about night things anymore!" , "cyan") , this);
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
@@ -546,11 +557,11 @@ public class Handler implements Runnable{
      */
     public void psychologistAct() throws IOException{
         if (((Psychologist)this.role).getCanSilent()!=0){
-            sendToCLient("[GOD]:You can silent a player if you want to type 1." , this);
+            sendToCLient(colorStr("[GOD]:You can silent a player if you want to type 1." , "cyan") , this);
             String choice = in.readUTF();
             if (choice.equals("1")){
                 while (true){
-                    sendToCLient("[GOD]:Which player you want to silent?" , this);
+                    sendToCLient(colorStr("[GOD]:Which player you want to silent?" , "cyan") , this);
                     String name = in.readUTF();
                     Handler player = findPlayerByName(name);
                     if ( player!=null && player.isAlive){
@@ -558,12 +569,12 @@ public class Handler implements Runnable{
                         ((Psychologist) this.role).setCanSilent();
                         break;
                     }else {
-                        sendToCLient("[GOD]:Wrong input." , this);
+                        sendToCLient(colorStr("[GOD]:Wrong input." ,"red"), this);
                     }
                 }
             }
         }else {
-            sendToCLient("[GOD]:You cant silent anymore!" , this);
+            sendToCLient(colorStr("[GOD]:You cant silent anymore!" , "cyan") , this);
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
@@ -578,16 +589,17 @@ public class Handler implements Runnable{
      */
     public void sniperAct() throws IOException{
         if (((Sniper)this.role).getHasShot()!= 0){
-            sendToCLient("[GOD]:You have one shot , if you want to take your shot type 1." , this);
+            sendToCLient(colorStr("[GOD]:You have one shot , if you want to take your shot type 1." , "cyan") , this);
             String choice =  in.readUTF();
             if (choice.equals("1")){
                 while (true){
-                    sendToCLient("[GOD]:Which player you want to shoot?" , this);
+                    sendToCLient(colorStr("[GOD]:Which player you want to shoot?" , "cyan") , this);
                     String name = in.readUTF();
                     Handler player = findPlayerByName(name);
                     if (player!=null && player.isAlive && !player.name.equals(this.name)){
                         if (player.role instanceof Citizen){
-                            sendToCLient("[GOD]:You shot one of citizens and now you are dead.if you want see the rest of the game type 1 else 2." , this);
+                            sendToCLient(colorStr("[GOD]:You shot one of citizens and now you are dead." +
+                                    "if you want see the rest of the game type 1 else 2." , "cyan") , this);
                             String choice1 = in.readUTF();
                             this.canRecieve = choice1.equals("1");
                             this.isAlive = false;
@@ -598,12 +610,12 @@ public class Handler implements Runnable{
                             break;
                         }
                     }else {
-                        sendToCLient("[GOD]:Wrong input." , this);
+                        sendToCLient(colorStr("[GOD]:Wrong input." , "red") , this);
                     }
                 }
             }
         }else {
-            sendToCLient("[GOD]:You cant shoot anymore!" , this);
+            sendToCLient(colorStr("[GOD]:Wrong input." , "cyan") , this);
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
@@ -617,17 +629,17 @@ public class Handler implements Runnable{
      * @throws IOException
      */
     public void detectiveAct() throws IOException {
-        sendToCLient("[GOD]:Choose a player and I tell you if its mafia or not!" , this);
+        sendToCLient(colorStr("[GOD]:Choose a player and I tell you if its mafia or not!" , "cyan") , this);
         String choice;
         while (true){
             choice = in.readUTF();
             if (findPlayerByName(choice) == null || findPlayerByName(choice).name.equals(this.name)){
-                sendToCLient("[GOD]:Wrong input." , this);
+                sendToCLient(colorStr("[GOD]:Wrong input." , "red") , this);
             }else if (findPlayerByName(choice).role instanceof Citizen || findPlayerByName(choice).role instanceof GodFather){
-                sendToCLient("[GOD]:This player is not mafia." , this);
+                sendToCLient(colorStr("[GOD]:This player is not mafia." , "blue") , this);
                 break;
             }else if (findPlayerByName(choice).role instanceof Mafia){
-                sendToCLient("[GOD]:This player is mafia." , this);
+                sendToCLient(colorStr("[GOD]:This player is mafia." , "red") , this);
                 break;
             }
         }
@@ -639,7 +651,7 @@ public class Handler implements Runnable{
      */
     public void lecterAct() throws IOException {
         while (true) {
-            sendToCLient("[GOD]:Which mafia you want to heal?", this);
+            sendToCLient(colorStr("[GOD]:Which mafia you want to heal?" , "cyan"), this);
             String name = in.readUTF();
             Handler player = findPlayerByName(name);
             if (player!=null && player.role instanceof DoctorLecter){
@@ -648,14 +660,14 @@ public class Handler implements Runnable{
                     ((DoctorLecter) this.role).setCanHeal(0);
                     break;
                 }else {
-                    sendToCLient("[GOD]:You cant heal your self anymore." , this);
+                    sendToCLient(colorStr("[GOD]:Which mafia you want to heal?" , "cyan") , this);
                 }
             }else if (player!=null && player.role.isMafia && player.isAlive){
                 player.getShot--;
                 ((DoctorLecter) this.role).setCanHeal(0);
                 break;
             }else {
-                sendToCLient("[GOD]:Wrong input!" , this);
+                sendToCLient(colorStr("[GOD]:Wrong input!" , "red") , this);
             }
         }
     }
@@ -666,7 +678,7 @@ public class Handler implements Runnable{
      */
     public void doctorAct()throws IOException{
         while (true) {
-            sendToCLient("[GOD]:Which player you want to heal?", this);
+            sendToCLient(colorStr("[GOD]:Which player you want to heal?" , "cyan"), this);
             String name = in.readUTF();
             Handler player = findPlayerByName(name);
             if (player!=null && player.role instanceof Doctor){
@@ -675,14 +687,14 @@ public class Handler implements Runnable{
                     ((Doctor) this.role).setCanHeal(0);
                     break;
                 }else {
-                    sendToCLient("[GOD]:You cant heal your self anymore." , this);
+                    sendToCLient(colorStr("[GOD]:You cant heal your self anymore." , "cyan") , this);
                 }
             }else if (player!=null && player.isAlive){
                 player.getShot--;
                 ((Doctor) this.role).setCanHeal(0);
                 break;
             }else {
-                sendToCLient("[GOD]:Wrong input!" , this);
+                sendToCLient(colorStr("[GOD]:Wrong input!" , "red") , this);
             }
         }
     }
@@ -700,7 +712,7 @@ public class Handler implements Runnable{
             }
         }
         //announcing them and creating their chatroom for only 30 seconds
-        sendToCLient("[GOD]:You have 30 seconds for consulting!" , this);
+        sendToCLient(colorStr("[GOD]:You have 30 seconds for consulting!" , "cyan") , this);
         long start = System.currentTimeMillis();
 //        long end = start + 30*1000;
         long end = start + 7 * 1000;
@@ -714,11 +726,11 @@ public class Handler implements Runnable{
                 if (this.canSpeak)
                     sendToAll(this.name, line);
                 else {
-                    sendToCLient("[GOD]:You are dead!" , this);
+                    sendToCLient(colorStr("[GOD]:You have 30 seconds for consulting!" , "cyan") , this);
                 }
             }
         }
-        sendToCLient("[GOD]:TIMES UP!" , this);
+        sendToCLient(colorStr("[GOD]:TIMES UP!" , "cyan") , this);
         try {
             Thread.sleep(1000);
         } catch (InterruptedException e) {
@@ -728,7 +740,7 @@ public class Handler implements Runnable{
         setMafiasPower();
         if (this.role instanceof Mafia){
             if (((Mafia) this.role).hasPower){
-                sendToCLient("[GOD]:You should type a player name to shoot." , this);
+                sendToCLient(colorStr("[GOD]:You should type a player name to shoot." , "cyan") , this);
                 while (true) {
                     mafiasChoice = in.readUTF();
                     Handler client = findPlayerByName(mafiasChoice);
@@ -742,7 +754,7 @@ public class Handler implements Runnable{
                         shot(client);
                         break;
                     }else {
-                        sendToCLient("[GOD]:Wrong input!" , this);
+                        sendToCLient(colorStr("[GOD]:Wrong input!" , "red") , this);
                     }
                 }
             } else {
@@ -853,13 +865,13 @@ public class Handler implements Runnable{
                 System.out.println(line);
                 if (canVote(line)) {
                     if (line.equals("0"))
-                        sendToCLient("[GOD]:You vote nobody!" , this);
+                        sendToCLient(colorStr("[GOD]:You vote nobody!" , "cyan") , this);
                     else {
-                        sendToCLient("[GOD]:You successfully voted!", this);
+                        sendToCLient(colorStr("[GOD]:You successfully voted!" , "cyan"), this);
                         submitVote(line);
                     }
                 } else {
-                    sendToCLient("[GOD]:Wrong input!Try again.", this);
+                    sendToCLient(colorStr("[GOD]:Wrong input!Try again." , "red"), this);
                 }
             }
         }
@@ -872,14 +884,14 @@ public class Handler implements Runnable{
      * @throws InterruptedException
      */
     public boolean voting() throws IOException, InterruptedException {
-        sendToCLient("\n[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!\n" , this);
-        sendToCLient("[GOD]:This is list of players :\n" , this);
+        sendToCLient(colorStr("\n[GOD]:Voting time!you have 30 seconds to vote a player who seems to be mafia!\n" , "cyan") , this);
+        sendToCLient(colorStr("[GOD]:This is list of players :\n" , "cyan") , this);
         //showing players list
         showPlayersList();
-        sendToCLient("-for voting a player please just type the players name!" , this);
+        sendToCLient(colorStr("-for voting a player please just type the players name!" , "cyan") , this);
         //starting voting
         startVoting();
-        sendToCLient("\n[GOD]:VOTING TIME'S UP!\n" , this);
+        sendToCLient(colorStr("\n[GOD]:VOTING TIME'S UP!\n" , "cyan") , this);
         try {
             Thread.sleep(2000);
         } catch (InterruptedException e) {
@@ -897,12 +909,11 @@ public class Handler implements Runnable{
         }
 
         Handler client = whoToLeave();
-//        String choice="";
         if (client==null)
-            sendToCLient("[GOD]:Nobody leaves the game." , this);
+            sendToCLient(colorStr("[GOD]:Nobody leaves the game." , "cyan") , this);
         else{
             if (!(this.role instanceof Mayor) && this.isAlive){
-                sendToCLient("[GOD]:Waiting for the Mayor..." , this);
+                sendToCLient(colorStr("[GOD]:Waiting for the Mayor..." , "blue") , this);
                 synchronized (this){
                     try {
                         this.wait();
@@ -917,7 +928,7 @@ public class Handler implements Runnable{
                     mayorAct(client);
                 else {
                     client.isAlive=false;
-                    sendToCLient("[GOD]:Mayor voted to kill you. if you wanna see the rest of game type 1" , client);
+                    sendToCLient(colorStr("[GOD]:Mayor voted to kill you. if you wanna see the rest of game type 1" , "cyan") , client);
                     String choice1 =client.in.readUTF();
                     client.canRecieve = choice1.equals("1");
                     sendToAll("GOD" , client.getName() + " died.");
@@ -943,23 +954,23 @@ public class Handler implements Runnable{
     public void mayorAct(Handler client){
         String choice;
         try {
-            sendToCLient("[GOD]:if you are agree to kill " + client.getName()+" type (yes) if not type (no)" , this);
+            sendToCLient(colorStr("[GOD]:if you are agree to kill " + client.getName()+" type (yes) if not type (no)" , "cyan") , this);
             while (true) {
                 choice = in.readUTF();
                 if (choice.equals("yes")) {
                     client.isAlive = false;
                     client.canSpeak = false;
-                    sendToCLient("[GOD]:Mayor voted to kill you. if you wanna see the rest of the game type 1." , client);
+                    sendToCLient(colorStr("[GOD]:Mayor voted to kill you. if you wanna see the rest of the game type 1." , "cyan") , client);
                     String choice1 = client.in.readUTF();
                     client.canRecieve = choice1.equals("1");
                     sendToAll("GOD" , client.getName() + " died.");
                     break;
                 } else if (choice.equals("no")) {
-                    sendToCLient("[GOD]:Mayor voted to save you." , client);
-                    sendToAll("GOD" ,"Mayor saved " + client.getName() );
+                    sendToCLient(colorStr("Mayor voted to save you." , "cyan") ,client);
+                    sendToAll("GOD" ,"Mayor saved " + client.getName());
                     break;
                 } else {
-                    sendToCLient("Wrong input" , this);
+                    sendToCLient(colorStr("Wrong input" , "red") , this);
                 }
             }
         } catch (IOException e) {
@@ -1029,14 +1040,14 @@ public class Handler implements Runnable{
         int i=1;
         for (Handler c : clients){
             if (c.isAlive){
-                sendToCLient(i +")" + c.getName() +" has " + c.getVotes() +" votes." , this);
+                sendToCLient(colorStr(i +")" + c.getName() +" has " + c.getVotes() +" votes." , "white") , this);
                 i++;
                 if (c.getVotes()>0) {
-                    sendToCLient("- These are the voters:" , this);
+                    sendToCLient(colorStr("- These are the voters:" , "white") , this);
                     for (Handler voter : clients) {
                         if (voter.getVotesTo()!=null) {
                             if (voter.getVotesTo().getName().equals(c.getName())) {
-                                sendToCLient("   -" + voter.getName(), this);
+                                sendToCLient(colorStr("   -" + voter.getName() , "white") , this);
                             }
                         }
                     }
@@ -1081,7 +1092,7 @@ public class Handler implements Runnable{
         int i = 1;
         for (Handler client : clients){
             if (client.isAlive) {
-                sendToCLient(i + ")" + client.getName() , this);
+                sendToCLient(colorStr(i + ")" + client.getName()  , "purple") , this);
                 i++;
             }
         }
@@ -1092,7 +1103,7 @@ public class Handler implements Runnable{
      * @throws IOException
      */
     public void freeChat()throws IOException {
-        sendToCLient("\n[GOD]:DAY CHAT TIMES START!\n" , this);
+        sendToCLient(colorStr("\n[GOD]:DAY CHAT TIMES START!\n" , "cyan") , this);
         long start = System.currentTimeMillis();
 //        long end = start + 5 * 60 * 1000;
         long end = start + 30 * 1000;
@@ -1110,11 +1121,11 @@ public class Handler implements Runnable{
                 if (this.canSpeak && this.isAlive)
                     sendToAll(this.name, line);
                 else {
-                    sendToCLient("[GOD]:You can't chat!" , this);
+                    sendToCLient(colorStr("[GOD]:You can't chat!" , "cyan") , this);
                 }
             }
         }
-        sendToCLient("\n[GOD]:DAY CHAT TIMES UP\n" , this);
+        sendToCLient(colorStr("\n[GOD]:DAY CHAT TIMES UP\n" , "blue") , this);
     }
 
     /**
@@ -1123,15 +1134,15 @@ public class Handler implements Runnable{
      */
     public void firstNight() throws IOException {
         //telling everybody for starting first night --------> do it better
-        sendToCLient("[GOD]:Hey everyone this is first night." , this);
+        sendToCLient(colorStr("[GOD]:Hey everyone this is first night." , "cyan") , this);
         //telling mafia  ---------> do it better
         showMafias();
         //telling citizens -------> do it better
         if (this.getRole() instanceof Citizen){
-            sendToCLient("[GOD]:Your role is " + this.getRole().name , this);
+            sendToCLient(colorStr("[GOD]:Your role is " + this.getRole().name  , "blue") , this);
             if (this.getRole() instanceof Mayor){
                 Handler doc = findPlayerByRole("Doctor");
-                sendToCLient("[GOD]:" + doc.name + " is Doctor!" , this);
+                sendToCLient(colorStr("[GOD]:" + doc.name + " is Doctor!" , "blue") , this);
             }
         }
     }
@@ -1144,12 +1155,12 @@ public class Handler implements Runnable{
         int i = 1;
         if (this.role instanceof Mafia){
             if (server.getGame().getMafiaCount()==1) {
-                sendToCLient("You are " + this.getRole().name , this);
+                sendToCLient(colorStr("You are " + this.getRole().name , "red") , this);
             } else {
-                sendToCLient("You are " + this.getRole().name + " and the other Mafias are:" , this);
+                sendToCLient(colorStr("You are " + this.getRole().name + " and the other Mafias are:" , "red"), this);
                 for (Handler client : clients) {
                     if (client.role.isMafia && !client.name.equals(this.name)) {
-                        sendToCLient(i + ")" + client.name + " is " + client.getRole().name , this);
+                        sendToCLient(colorStr(i + ")" + client.name + " is " + client.getRole().name , "red") , this);
                         i++;
                     }
                 }
@@ -1176,7 +1187,7 @@ public class Handler implements Runnable{
      * @throws IOException
      */
     public void quit() throws IOException{
-        sendToCLient("You left the game! if you want to see the rest of chat press 1 else 2!" , this);
+        sendToCLient(colorStr("You left the game! if you want to see the rest of chat press 1 else 2!" , "cyan" ) , this);
         String command = in.readUTF();
         this.canRecieve = command.equals("1");
         this.canSpeak = false;
@@ -1190,18 +1201,18 @@ public class Handler implements Runnable{
      */
     public void register() throws IOException{
         while (true){
-            sendToCLient("Enter your username:" , this);
+            sendToCLient(colorStr("Enter your username:" , "purple") , this);
             String name = in.readUTF();
             if (!names.contains(name) && !name.isBlank()){
                 names.add(name);
                 this.name = name;
                 break;
             }else if (names.contains(name)){
-                sendToCLient("This user is in the game!Please choose another name." , this);
+                sendToCLient(colorStr("This user is in the game!Please choose another name." , "purple"), this );
             }
         }
         while (true){
-            sendToCLient("Type (ready) to join the game!" , this);
+            sendToCLient(colorStr("Type (ready) to join the game!" , "purple") , this);
             String command = in.readUTF();
             if (!command.isBlank() && command.equals("ready")) {
                 this.canSpeak = true;
@@ -1213,7 +1224,7 @@ public class Handler implements Runnable{
                 this.role =server.getRoles().get(index);
                 break;
             }else {
-                sendToCLient("Wrong input." , this);
+                sendToCLient(colorStr("Wrong input." , "red") , this);
             }
         }
     }
@@ -1227,8 +1238,7 @@ public class Handler implements Runnable{
         for (Handler client : clients){
             try {
                 if (client.canRecieve) {
-                    client.out.writeUTF("["+ sender +  "] : " + msg);
-                    client.out.flush();
+                    sendToCLient(colorStr("["+ sender +  "] : " , "yellow") + colorStr(msg , "green"), client);
                 }
             }catch (IOException e){
                 e.printStackTrace();
@@ -1245,5 +1255,27 @@ public class Handler implements Runnable{
     public void sendToCLient(String msg , Handler client) throws IOException {
         client.out.writeUTF(msg);
         client.out.flush();
+    }
+
+    public String colorStr(String msg , String color){
+        switch (color){
+            case "blue":
+                return ANSI_BLUE + msg + ANSI_RESET;
+            case "red":
+                return ANSI_RED + msg + ANSI_RESET;
+            case "yellow":
+                return ANSI_YELLOW + msg + ANSI_RESET;
+            case "purple":
+                return ANSI_PURPLE + msg + ANSI_RESET;
+            case "cyan":
+                return ANSI_CYAN + msg + ANSI_RESET;
+            case "green":
+                return ANSI_GREEN + msg + ANSI_RESET;
+            case "black":
+                return ANSI_BLACK + msg + ANSI_RESET;
+            case "white":
+                return ANSI_WHITE + msg + ANSI_RESET;
+        }
+        return "";
     }
 }
